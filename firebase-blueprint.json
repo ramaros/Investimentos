@@ -1,0 +1,87 @@
+{
+  "entities": {
+    "Compra": {
+      "title": "Compra de Ativo",
+      "description": "Registro de uma operação de compra de ações",
+      "type": "object",
+      "properties": {
+        "id": {
+          "type": "string",
+          "description": "ID exclusivo do registro de compra"
+        },
+        "ticker": {
+          "type": "string",
+          "description": "Símbolo/Ticker da ação (ex: VALE3, PETR4)"
+        },
+        "quantity": {
+          "type": "number",
+          "description": "Quantidade adquirida"
+        },
+        "price": {
+          "type": "number",
+          "description": "Preço unitário pago"
+        },
+        "total": {
+          "type": "number",
+          "description": "Aporte total calculado (quantidade * preço)"
+        },
+        "date": {
+          "type": "string",
+          "description": "Data de realização da compra (formato YYYY-MM-DD)"
+        },
+        "type": {
+          "type": "string",
+          "description": "Classe de ativo (Ações, FIIs, Renda Fixa, Criptomoedas)",
+          "enum": ["Ações", "FIIs", "Renda Fixa", "Criptomoedas"]
+        },
+        "sector": {
+          "type": "string",
+          "description": "Setor do ativo (ex: Financeiro, Tecnologia, Tesouro, DeFi, etc.)"
+        },
+        "createdAt": {
+          "type": "string",
+          "description": "Timestamp de criação do registro"
+        }
+      },
+      "required": ["id", "ticker", "quantity", "price", "total", "date"]
+    },
+    "Provento": {
+      "title": "Provento Recebido",
+      "description": "Registro de recebimento de proventos (dividendos, JCP, etc)",
+      "type": "object",
+      "properties": {
+        "id": {
+          "type": "string",
+          "description": "ID exclusivo do registro de provento"
+        },
+        "ticker": {
+          "type": "string",
+          "description": "Símbolo/Ticker da ação correspondente"
+        },
+        "amount": {
+          "type": "number",
+          "description": "Valor total recebido"
+        },
+        "date": {
+          "type": "string",
+          "description": "Data de recebimento (formato YYYY-MM-DD)"
+        },
+        "createdAt": {
+          "type": "string",
+          "description": "Timestamp de criação do registro"
+        }
+      },
+      "required": ["id", "ticker", "amount", "date"]
+    }
+  },
+  "firestore": {
+    "/users/{userId}/compras/{compraId}": {
+      "schema": "Compra",
+      "description": "Coleção contendo os registros de compras de ativos do usuário"
+    },
+    "/users/{userId}/proventos/{proventoId}": {
+      "schema": "Provento",
+      "description": "Coleção contendo os proventos recebidos pelo usuário"
+    }
+  }
+}
