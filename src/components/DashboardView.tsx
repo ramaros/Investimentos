@@ -155,7 +155,7 @@ export function DashboardView({ assetSummaries, compras, proventos }: DashboardV
                     cy="50%"
                     outerRadius={85}
                     dataKey="value"
-                    label={({ name, percentage }) => `${name} ${percentage}`}
+                    label={(props: any) => `${props.name} ${props.percentage || ""}`}
                   >
                     {currentAllocationData.map((entry, index) => (
                       <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
