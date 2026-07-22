@@ -19,7 +19,8 @@ import {
   RefreshCw,
   ShieldAlert,
   Copy,
-  Check
+  Check,
+  Lock
 } from "lucide-react";
 import { useInvestments } from "./hooks/useInvestments";
 import { useNetworkStatus } from "./hooks/useNetworkStatus";
@@ -290,6 +291,17 @@ export default function App() {
             </button>
 
             {/* Authentication Action */}
+            <button
+              onClick={() => {
+                sessionStorage.removeItem("investflow_session_unlocked");
+                setIsUnlocked(false);
+              }}
+              title="Bloquear Aplicativo"
+              className="p-1.5 text-slate-400 hover:text-blue-400 hover:bg-slate-800/80 rounded-lg transition-all cursor-pointer flex items-center justify-center"
+            >
+              <Lock className="w-4 h-4" />
+            </button>
+
             {authLoading ? (
               <div className="w-6 h-6 rounded-full border-2 border-slate-700 border-t-white animate-spin" />
             ) : user ? (
@@ -301,8 +313,12 @@ export default function App() {
                   className="w-7 h-7 rounded-full border border-slate-700 shadow"
                 />
                 <button 
-                  onClick={logout} 
-                  title="Sair"
+                  onClick={() => {
+                    logout();
+                    sessionStorage.removeItem("investflow_session_unlocked");
+                    setIsUnlocked(false);
+                  }} 
+                  title="Sair e Bloquear"
                   className="p-1 text-slate-400 hover:text-rose-400 hover:bg-slate-850 rounded transition-colors cursor-pointer"
                 >
                   <LogOut className="w-3.5 h-3.5" />

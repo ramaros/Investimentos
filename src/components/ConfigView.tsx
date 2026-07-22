@@ -86,6 +86,7 @@ export function ConfigView({
 
     try {
       localStorage.setItem("custom_firebase_config", JSON.stringify(config, null, 2));
+      sessionStorage.removeItem("investflow_session_unlocked");
       setFirebaseSaveSuccess(true);
       setTimeout(() => {
         // Reload to let main.tsx initialize with new credentials
@@ -99,6 +100,7 @@ export function ConfigView({
   const handleClearCustomFirebase = () => {
     if (window.confirm("Deseja mesmo redefinir para o Firebase padrão do InvestFlow? O aplicativo será recarregado.")) {
       localStorage.removeItem("custom_firebase_config");
+      sessionStorage.removeItem("investflow_session_unlocked");
       window.location.reload();
     }
   };
