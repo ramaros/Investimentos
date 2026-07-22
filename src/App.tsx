@@ -16,7 +16,10 @@ import {
   LineChart,
   Wifi,
   Database,
-  RefreshCw
+  RefreshCw,
+  ShieldAlert,
+  Copy,
+  Check
 } from "lucide-react";
 import { useInvestments } from "./hooks/useInvestments";
 import { useNetworkStatus } from "./hooks/useNetworkStatus";
@@ -45,6 +48,7 @@ export default function App() {
     compras,
     proventos,
     loading,
+    syncError,
     quotes,
     lastQuoteUpdate,
     assetSummaries,
@@ -69,6 +73,8 @@ export default function App() {
   const [isUnlocked, setIsUnlocked] = useState<boolean>(() => {
     return sessionStorage.getItem("investflow_session_unlocked") === "true";
   });
+  
+  const [copiedRules, setCopiedRules] = useState(false);
 
   // List of unique tickers owned
   const existingTickers = assetSummaries.map(a => a.ticker);
@@ -320,6 +326,81 @@ export default function App() {
       {/* BODY CONTENT */}
       <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 mt-8 space-y-8">
         
+        {/* FIRESTORE RULES WARNING CARD */}
+        {syncError && (
+          <div className="bg-amber-50 border border-amber-200 rounded-2xl p-6 shadow-sm">
+            <div className="flex items-start gap-4">
+              <div className="p-3 bg-amber-100 text-amber-700 rounded-xl shrink-0 animate-pulse">
+                <ShieldAlert className="w-6 h-6" />
+              </div>
+              <div className="space-y-3 flex-1">
+                <h3 className="text-sm font-bold text-slate-900 uppercase tracking-wide">
+                  ⚠️ Erro de Permissões no seu Banco de Dados (Firestore)
+                </h3>
+                <p className="text-xs text-slate-600 leading-relaxed font-semibold">
+                  Seu aplicativo conectou com sucesso ao seu projeto Firebase customizado (<span className="text-blue-600 font-extrabold">{firebaseConfig?.projectId}</span>), mas as requisições estão sendo rejeitadas devido às regras de segurança (<i>Missing or insufficient permissions</i>).
+                </p>
+                <div className="text-xs text-slate-600 space-y-2">
+                  <p className="font-extrabold text-slate-800 uppercase tracking-wider text-[10px]">
+                    Como corrigir isso em 30 segundos:
+                  </p>
+                  <ol className="list-decimal pl-5 space-y-1.5 font-medium">
+                    <li>Acesse o <a href="https://console.firebase.google.com/" target="_blank" rel="noopener noreferrer" className="text-blue-600 font-bold hover:underline">Console do Firebase</a> e entre no seu projeto.</li>
+                    <li>No menu lateral esquerdo, clique em <strong>Firestore Database</strong>.</li>
+                    <li>Clique na guia <strong>Regras (Rules)</strong> no topo da página.</li>
+                    <li>Substitua as regras atuais pelas regras abaixo (elas garantem que cada usuário acesse apenas seus próprios dados de forma segura):</li>
+                  </ol>
+                </div>
+
+                {/* Rules Code Snippet */}
+                <div className="relative mt-3">
+                  <pre className="bg-slate-900 text-slate-200 text-[11px] font-mono p-4 rounded-xl overflow-x-auto select-all max-w-full">
+{`rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    match /users/{userId}/{document=**} {
+      allow read, write: if request.auth != null && request.auth.uid == userId;
+    }
+  }
+}`}
+                  </pre>
+                  <button
+                    onClick={() => {
+                      navigator.clipboard.writeText(`rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    match /users/{userId}/{document=**} {
+      allow read, write: if request.auth != null && request.auth.uid == userId;
+    }
+  }
+}`);
+                      setCopiedRules(true);
+                      setTimeout(() => setCopiedRules(false), 2000);
+                    }}
+                    className="absolute top-2.5 right-2.5 px-3 py-1.5 bg-slate-800 hover:bg-slate-700 active:scale-95 text-slate-200 hover:text-white rounded-lg text-[10px] font-bold uppercase tracking-wider transition-all flex items-center gap-1.5 cursor-pointer"
+                  >
+                    {copiedRules ? (
+                      <>
+                        <Check className="w-3.5 h-3.5 text-emerald-400" />
+                        Copiado!
+                      </>
+                    ) : (
+                      <>
+                        <Copy className="w-3.5 h-3.5" />
+                        Copiar Regras
+                      </>
+                    )}
+                  </button>
+                </div>
+
+                <p className="text-[10px] text-amber-600/90 font-extrabold uppercase tracking-wide pt-1">
+                  5. Clique em "Publicar" (Publish) no console do Firebase. O aplicativo começará a sincronizar automaticamente sem precisar atualizar a página!
+                </p>
+              </div>
+            </div>
+          </div>
+        )}
+
         {/* TOP KPI CARDS ROW */}
         <section className="grid grid-cols-1 md:grid-cols-3 gap-6">
           <KPICard

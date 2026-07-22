@@ -50,6 +50,7 @@ export function useInvestments() {
   const [compras, setCompras] = useState<Compra[]>([]);
   const [proventos, setProventos] = useState<Provento[]>([]);
   const [loading, setLoading] = useState(true);
+  const [syncError, setSyncError] = useState<string | null>(null);
 
   // Quotes from our market service (refreshable)
   const [quotes, setQuotes] = useState<{ [ticker: string]: StockQuote }>({});
@@ -111,6 +112,7 @@ export function useInvestments() {
     if (user) {
       // Firebase Synchronized Mode
       setLoading(true);
+      setSyncError(null);
       
       const comprasRef = collection(db, "users", user.uid, "compras");
       const proventosRef = collection(db, "users", user.uid, "proventos");
@@ -126,6 +128,8 @@ export function useInvestments() {
         setLoading(false);
       }, (error) => {
         console.error("Erro sincronizando compras do Firestore:", error);
+        setSyncError(error.message || "Erro de permissão ou conexão no Firestore.");
+        setLoading(false);
       });
 
       const unsubProventos = onSnapshot(proventosRef, (snapshot) => {
@@ -136,8 +140,11 @@ export function useInvestments() {
         // Sort by date descending
         list.sort((a, b) => b.date.localeCompare(a.date));
         setProventos(list);
+        setLoading(false);
       }, (error) => {
         console.error("Erro sincronizando proventos do Firestore:", error);
+        setSyncError(error.message || "Erro de permissão ou conexão no Firestore.");
+        setLoading(false);
       });
 
       return () => {
@@ -479,6 +486,7 @@ export function useInvestments() {
     compras,
     proventos,
     loading,
+    syncError,
     quotes,
     lastQuoteUpdate,
     assetSummaries,
