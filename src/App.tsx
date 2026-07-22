@@ -13,9 +13,14 @@ import {
   LogIn, 
   Layers, 
   Sparkles, 
-  LineChart 
+  LineChart,
+  Wifi,
+  Database,
+  RefreshCw
 } from "lucide-react";
 import { useInvestments } from "./hooks/useInvestments";
+import { useNetworkStatus } from "./hooks/useNetworkStatus";
+import { LoginPINView } from "./components/LoginPINView";
 import { KPICard } from "./components/KPICard";
 import { CompraModal } from "./components/CompraModal";
 import { ProventoModal } from "./components/ProventoModal";
@@ -52,9 +57,17 @@ export default function App() {
     importBackup
   } = useInvestments();
 
+  const networkStatus = useNetworkStatus();
+
   const [activeTab, setActiveTab] = useState<TabId>("Ativos");
   const [isCompraOpen, setIsCompraOpen] = useState(false);
   const [isProventoOpen, setIsProventoOpen] = useState(false);
+  const [showHeaderStatus, setShowHeaderStatus] = useState(false);
+  
+  // Track PIN lock state for this session
+  const [isUnlocked, setIsUnlocked] = useState<boolean>(() => {
+    return sessionStorage.getItem("investflow_session_unlocked") === "true";
+  });
 
   // List of unique tickers owned
   const existingTickers = assetSummaries.map(a => a.ticker);
@@ -67,6 +80,18 @@ export default function App() {
     }
   };
 
+  // If the app is locked with PIN, show the secure login screen
+  if (!isUnlocked) {
+    return (
+      <LoginPINView 
+        onUnlock={() => {
+          sessionStorage.setItem("investflow_session_unlocked", "true");
+          setIsUnlocked(true);
+        }} 
+      />
+    );
+  }
+
   return (
     <div className="min-h-screen bg-[#F8FAFC] text-slate-800 font-sans antialiased pb-12 select-none">
       
@@ -75,7 +100,7 @@ export default function App() {
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-3.5 flex flex-col lg:flex-row items-center justify-between gap-4">
           
           {/* Logo & Sync Status Indicator */}
-          <div className="flex items-center gap-3">
+          <div className="flex items-center gap-3 relative">
             <div className="p-2 bg-blue-600 rounded-lg shadow-sm">
               <LineChart className="w-5 h-5 text-white" />
             </div>
@@ -83,23 +108,99 @@ export default function App() {
               <h1 className="text-sm font-bold tracking-wider uppercase text-white font-sans">
                 InvestFlow
               </h1>
-              <div className="flex items-center gap-1.5 mt-0.5">
+              <button 
+                onClick={() => setShowHeaderStatus(!showHeaderStatus)}
+                className="flex items-center gap-1.5 mt-0.5 text-left hover:opacity-80 transition-all cursor-pointer focus:outline-none"
+                title="Clique para verificar conexões em tempo real"
+              >
                 {isOfflineMode ? (
                   <>
                     <CloudOff className="w-3 h-3 text-amber-500 animate-pulse" />
-                    <span className="text-[9px] font-bold tracking-wider text-amber-500 uppercase">
-                      MODO LOCAL (OFFLINE)
+                    <span className="text-[9px] font-extrabold tracking-wider text-amber-500 uppercase flex items-center gap-1">
+                      MODO LOCAL <span className="bg-slate-850 text-slate-300 px-1 py-0.5 rounded text-[8px] border border-slate-700">Verificar</span>
                     </span>
                   </>
                 ) : (
                   <>
                     <Cloud className="w-3 h-3 text-emerald-400" />
-                    <span className="text-[9px] font-bold tracking-wider text-emerald-400 uppercase">
-                      Sincronizado via Firebase
+                    <span className="text-[9px] font-extrabold tracking-wider text-emerald-400 uppercase flex items-center gap-1">
+                      Sincronizado <span className="bg-[#1e293b] text-emerald-300 px-1 py-0.5 rounded text-[8px] border border-slate-800">Verificar</span>
                     </span>
                   </>
                 )}
-              </div>
+              </button>
+
+              {/* Real-time dropdown connectivity info */}
+              {showHeaderStatus && (
+                <div className="absolute top-12 left-0 w-72 bg-[#1e293b] border border-slate-800 rounded-2xl shadow-xl p-4.5 z-50 text-white space-y-3.5 animate-fadeIn">
+                  <div className="flex items-center justify-between pb-2 border-b border-slate-800">
+                    <span className="text-[10px] font-extrabold uppercase tracking-widest text-slate-400">
+                      Monitor de Conectividade
+                    </span>
+                    <button 
+                      onClick={() => setShowHeaderStatus(false)}
+                      className="text-slate-400 hover:text-white text-xs font-bold px-1"
+                    >
+                      X
+                    </button>
+                  </div>
+
+                  <div className="flex items-center justify-between text-xs font-semibold">
+                    <span className="text-slate-400">Status da Rede:</span>
+                    <span className={`flex items-center gap-1.5 ${networkStatus.isOnline ? "text-emerald-400" : "text-rose-400"}`}>
+                      {networkStatus.isOnline ? (
+                        <>
+                          <Wifi className="w-3.5 h-3.5" /> Online
+                        </>
+                      ) : (
+                        <>
+                          <CloudOff className="w-3.5 h-3.5" /> Offline
+                        </>
+                      )}
+                    </span>
+                  </div>
+
+                  <div className="flex items-center justify-between text-xs font-semibold">
+                    <span className="text-slate-400">Sincronizador Firebase:</span>
+                    <span className={`flex items-center gap-1.5 ${
+                      networkStatus.firebaseStatus === "connected" 
+                        ? "text-emerald-400" 
+                        : networkStatus.firebaseStatus === "connecting"
+                          ? "text-amber-400 animate-pulse"
+                          : "text-rose-400"
+                    }`}>
+                      <Database className="w-3.5 h-3.5" /> 
+                      {networkStatus.firebaseStatus === "connected" ? "Conectado" : networkStatus.firebaseStatus === "connecting" ? "Conectando..." : "Desconectado"}
+                    </span>
+                  </div>
+
+                  <div className="flex items-center justify-between text-xs font-semibold">
+                    <span className="text-slate-400">Latência do Canal:</span>
+                    <span className="font-extrabold text-blue-400">
+                      {networkStatus.latency !== null ? `${networkStatus.latency} ms` : "--"}
+                    </span>
+                  </div>
+
+                  <div className="flex items-center justify-between text-xs font-semibold">
+                    <span className="text-slate-400">Último Heartbeat:</span>
+                    <span className="text-slate-300">
+                      {networkStatus.lastSyncTime}
+                    </span>
+                  </div>
+
+                  <button
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      networkStatus.testConnection();
+                    }}
+                    disabled={networkStatus.isTesting}
+                    className="w-full flex items-center justify-center gap-2 py-2 bg-blue-600 hover:bg-blue-700 disabled:opacity-55 text-xs font-bold text-white rounded-xl transition-all cursor-pointer"
+                  >
+                    <RefreshCw className={`w-3.5 h-3.5 ${networkStatus.isTesting ? "animate-spin" : ""}`} />
+                    {networkStatus.isTesting ? "Testando..." : "Testar Conexão Agora"}
+                  </button>
+                </div>
+              )}
             </div>
           </div>
 
