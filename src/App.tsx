@@ -75,8 +75,38 @@ export default function App() {
   const handleGoogleSignIn = async () => {
     try {
       await loginWithGoogle();
-    } catch (err) {
-      alert("Falha ao autenticar com o Google. Certifique-se de que popups são permitidos.");
+    } catch (err: any) {
+      console.error("Erro no login Firebase Auth:", err);
+      const errorCode = err?.code || "";
+      const errorMessage = err?.message || "";
+      
+      if (errorCode === "auth/unauthorized-domain" || errorMessage.includes("unauthorized-domain") || errorMessage.includes("unauthorized_client")) {
+        alert(
+          "⚠️ DOMÍNIO NÃO AUTORIZADO NO FIREBASE!\n\n" +
+          "O domínio de hospedagem atual (ex: ramaros.github.io) precisa ser autorizado nas configurações do Firebase Authentication.\n\n" +
+          "Como corrigir isso em 1 minuto:\n" +
+          "1. Acesse o Console do Firebase (https://console.firebase.google.com/)\n" +
+          "2. Entre no seu projeto (analytical-falcon-sskkt)\n" +
+          "3. No menu lateral esquerdo, vá em 'Authentication'\n" +
+          "4. Clique na guia 'Configurações' (Settings) no topo\n" +
+          "5. Clique em 'Domínios autorizados' (Authorized domains) na lista lateral\n" +
+          "6. Clique em 'Adicionar domínio'\n" +
+          "7. Digite: ramaros.github.io\n" +
+          "8. Clique em Salvar e depois recarregue esta página do seu navegador!\n\n" +
+          "Dica: Se o erro persistir, certifique-se também de que adicionou o domínio do Github Pages sem 'https://' ou subpastas (apenas 'ramaros.github.io')."
+        );
+      } else if (errorCode === "auth/popup-closed-by-user" || errorMessage.includes("popup-closed-by-user")) {
+        alert("O login do Google foi fechado antes de concluir a autenticação.");
+      } else if (errorCode === "auth/popup-blocked" || errorMessage.includes("popup-blocked")) {
+        alert("O seu navegador bloqueou a janela de autenticação. Por favor, habilite popups para este site.");
+      } else {
+        alert(
+          "Falha ao autenticar com o Google:\n" + 
+          "Código: " + errorCode + "\n" +
+          "Mensagem: " + errorMessage + "\n\n" +
+          "Por favor, verifique se seu domínio 'ramaros.github.io' foi adicionado em 'Domínios Autorizados' no Console do Firebase."
+        );
+      }
     }
   };
 

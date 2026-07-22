@@ -19,8 +19,8 @@ import {
   orderBy
 } from "firebase/firestore";
 
-// Read from config file contents
-const firebaseConfig = {
+// Read from config file contents or dynamic user-defined custom configuration
+const defaultFirebaseConfig = {
   projectId: "analytical-falcon-sskkt",
   appId: "1:497656025148:web:172d7f13ae7fc1e686f339",
   apiKey: "AIzaSyAhmixqf1xtZbZ8haJHl2iLsxb26gfzBA0",
@@ -29,7 +29,22 @@ const firebaseConfig = {
   messagingSenderId: "497656025148"
 };
 
-// Initialize Firebase
+let firebaseConfig = defaultFirebaseConfig;
+
+try {
+  const customConfigStr = localStorage.getItem("custom_firebase_config");
+  if (customConfigStr) {
+    const parsed = JSON.parse(customConfigStr);
+    if (parsed && parsed.projectId && parsed.apiKey) {
+      firebaseConfig = parsed;
+      console.log("Firebase inicializado com projeto customizado:", firebaseConfig.projectId);
+    }
+  }
+} catch (e) {
+  console.error("Erro ao carregar configuração personalizada do Firebase:", e);
+}
+
+// Initialize Firebase safely
 const app = initializeApp(firebaseConfig);
 export const auth = getAuth(app);
 export const db = getFirestore(app);

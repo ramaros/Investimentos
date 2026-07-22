@@ -1,5 +1,5 @@
 import React, { useRef, useState } from "react";
-import { Database, Download, Upload, Trash2, ShieldAlert, BadgeInfo, CheckCircle, RefreshCw } from "lucide-react";
+import { Database, Download, Upload, Trash2, ShieldAlert, BadgeInfo, CheckCircle, RefreshCw, Key, HelpCircle, ShieldCheck } from "lucide-react";
 import { getQuote, setCustomPrice, getAllQuotes } from "../services/market";
 import { StockQuote } from "../types";
 
@@ -28,6 +28,80 @@ export function ConfigView({
   const [manualTicker, setManualTicker] = useState("");
   const [manualPrice, setManualPrice] = useState("");
   const [overrideSuccess, setOverrideSuccess] = useState(false);
+
+  // Custom Firebase configuration states
+  const [customFirebaseJson, setCustomFirebaseJson] = useState(() => {
+    return localStorage.getItem("custom_firebase_config") || "";
+  });
+  const [firebaseSaveSuccess, setFirebaseSaveSuccess] = useState(false);
+  const [firebaseError, setFirebaseError] = useState<string | null>(null);
+
+  // Helper parser for Firebase config copy-pasted text
+  const parseFirebaseConfig = (text: string) => {
+    try {
+      // Direct strict JSON parse
+      const parsed = JSON.parse(text);
+      if (parsed.apiKey && parsed.projectId && parsed.appId) {
+        return parsed;
+      }
+    } catch (e) {}
+
+    // Regex extract values for lenient copy-pasting (can handle raw JS objects or strings)
+    const apiKeyMatch = text.match(/apiKey:\s*["']([^"']+)["']|["']apiKey["']:\s*["']([^"']+)["']/);
+    const authDomainMatch = text.match(/authDomain:\s*["']([^"']+)["']|["']authDomain["']:\s*["']([^"']+)["']/);
+    const projectIdMatch = text.match(/projectId:\s*["']([^"']+)["']|["']projectId["']:\s*["']([^"']+)["']/);
+    const storageBucketMatch = text.match(/storageBucket:\s*["']([^"']+)["']|["']storageBucket["']:\s*["']([^"']+)["']/);
+    const messagingSenderIdMatch = text.match(/messagingSenderId:\s*["']([^"']+)["']|["']messagingSenderId["']:\s*["']([^"']+)["']/);
+    const appIdMatch = text.match(/appId:\s*["']([^"']+)["']|["']appId["']:\s*["']([^"']+)["']/);
+
+    const apiKey = apiKeyMatch ? (apiKeyMatch[1] || apiKeyMatch[2]) : null;
+    const authDomain = authDomainMatch ? (authDomainMatch[1] || authDomainMatch[2]) : null;
+    const projectId = projectIdMatch ? (projectIdMatch[1] || projectIdMatch[2]) : null;
+    const storageBucket = storageBucketMatch ? (storageBucketMatch[1] || storageBucketMatch[2]) : null;
+    const messagingSenderId = messagingSenderIdMatch ? (messagingSenderIdMatch[1] || messagingSenderIdMatch[2]) : null;
+    const appId = appIdMatch ? (appIdMatch[1] || appIdMatch[2]) : null;
+
+    if (apiKey && projectId && appId) {
+      return { apiKey, authDomain, projectId, storageBucket, messagingSenderId, appId };
+    }
+
+    return null;
+  };
+
+  const handleSaveCustomFirebase = (e: React.FormEvent) => {
+    e.preventDefault();
+    setFirebaseError(null);
+    setFirebaseSaveSuccess(false);
+
+    if (!customFirebaseJson.trim()) {
+      setFirebaseError("Por favor, cole um objeto de configuração do Firebase.");
+      return;
+    }
+
+    const config = parseFirebaseConfig(customFirebaseJson);
+    if (!config) {
+      setFirebaseError("Não foi possível detectar as credenciais de um projeto Firebase. Certifique-se de incluir apiKey, projectId e appId.");
+      return;
+    }
+
+    try {
+      localStorage.setItem("custom_firebase_config", JSON.stringify(config, null, 2));
+      setFirebaseSaveSuccess(true);
+      setTimeout(() => {
+        // Reload to let main.tsx initialize with new credentials
+        window.location.reload();
+      }, 1500);
+    } catch (err: any) {
+      setFirebaseError("Falha ao salvar configuração: " + err.message);
+    }
+  };
+
+  const handleClearCustomFirebase = () => {
+    if (window.confirm("Deseja mesmo redefinir para o Firebase padrão do InvestFlow? O aplicativo será recarregado.")) {
+      localStorage.removeItem("custom_firebase_config");
+      window.location.reload();
+    }
+  };
 
   const handleFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
@@ -190,6 +264,94 @@ export function ConfigView({
           <span className="text-xs font-bold">{importStatus.msg}</span>
         </div>
       )}
+
+      {/* CONEXÃO FIREBASE PERSONALIZADA (Bypass de Domínio Autorizado) */}
+      <div className="bg-white border border-slate-200/85 rounded-2xl p-6 md:p-8 shadow-sm">
+        <div className="flex items-start gap-4 mb-6">
+          <div className="p-3 bg-blue-50 text-blue-600 rounded-xl">
+            <Key className="w-5 h-5" />
+          </div>
+          <div>
+            <h4 className="text-sm font-bold text-slate-950 uppercase tracking-wide">Banco de Dados Firebase Próprio</h4>
+            <p className="text-[11px] text-slate-400 font-bold uppercase mt-0.5">Sincronize seus dados em qualquer domínio sem restrições de permissão</p>
+          </div>
+        </div>
+
+        {/* Informative notice explaining the issue and step-by-step solution */}
+        <div className="bg-slate-50 border border-slate-200 rounded-xl p-5 mb-6 space-y-4 text-xs font-medium text-slate-600 leading-relaxed">
+          <div className="flex items-start gap-2 text-slate-800 font-bold">
+            <HelpCircle className="w-4 h-4 text-blue-600 shrink-0 mt-0.5" />
+            <span>Por que configurar um Firebase próprio?</span>
+          </div>
+          <p>
+            O Firebase padrão do InvestFlow é gerenciado pelo AI Studio, o que impede que você autorize o seu domínio de publicação (<strong>ramaros.github.io</strong>) diretamente para login com Google (erro de permissão no console).
+          </p>
+          <p className="font-semibold text-slate-800">
+            Você pode corrigir isso de forma definitiva e ter um banco de dados 100% seu e grátis em 4 passos simples:
+          </p>
+          <ol className="list-decimal pl-5 space-y-2.5">
+            <li>Acesse o <a href="https://console.firebase.google.com/" target="_blank" rel="noopener noreferrer" className="text-blue-600 font-bold hover:underline inline-flex items-center gap-0.5">Console do Firebase</a> com sua conta Google e crie um novo projeto gratuito.</li>
+            <li>No menu lateral, ative o <strong>Firestore Database</strong> (crie em Modo Produção ou Teste) e habilite o provedor de login <strong>Google</strong> na guia <strong>Authentication</strong>.</li>
+            <li>Na aba <strong>Authentication &gt; Configurações (Settings) &gt; Domínios Autorizados</strong>, adicione o seu domínio: <code className="bg-slate-200 text-slate-800 px-1.5 py-0.5 rounded font-mono text-[11px]">ramaros.github.io</code></li>
+            <li>Vá em <strong>Configurações do Projeto &gt; Geral</strong>, role até "Seus aplicativos", registre um aplicativo Web e copie o objeto de configuração correspondente (contendo <i>apiKey, authDomain, projectId, appId</i>, etc.).</li>
+          </ol>
+        </div>
+
+        {/* Input Form for custom Firebase Config */}
+        <form onSubmit={handleSaveCustomFirebase} className="space-y-4">
+          <div>
+            <label className="block text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-2">
+              Objeto de Configuração Firebase (JS ou JSON)
+            </label>
+            <textarea
+              rows={6}
+              placeholder={`const firebaseConfig = {
+  apiKey: "AIzaSy...",
+  authDomain: "seu-projeto.firebaseapp.com",
+  projectId: "seu-projeto",
+  storageBucket: "seu-projeto.firebasestorage.app",
+  messagingSenderId: "1234567890",
+  appId: "1:1234567:web:abcd"
+};`}
+              value={customFirebaseJson}
+              onChange={(e) => setCustomFirebaseJson(e.target.value)}
+              className="w-full p-4 bg-slate-50 border border-slate-200 rounded-xl font-mono text-[11px] font-semibold text-slate-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:bg-white placeholder:text-slate-300"
+            />
+          </div>
+
+          {/* Feedback alerts */}
+          {firebaseError && (
+            <div className="p-3 bg-rose-50 border border-rose-100 rounded-xl text-rose-600 text-xs font-bold uppercase tracking-wide">
+              {firebaseError}
+            </div>
+          )}
+
+          {firebaseSaveSuccess && (
+            <div className="p-3 bg-emerald-50 border border-emerald-100 rounded-xl text-emerald-600 text-xs font-bold uppercase tracking-wide flex items-center gap-2">
+              <ShieldCheck className="w-4 h-4 text-emerald-500" /> Configurações salvas! Recarregando aplicativo...
+            </div>
+          )}
+
+          <div className="flex flex-col sm:flex-row gap-3">
+            <button
+              type="submit"
+              className="flex-1 py-3 bg-blue-600 hover:bg-blue-700 active:scale-95 text-white font-bold rounded-xl transition-all text-xs cursor-pointer flex items-center justify-center gap-2"
+            >
+              <Key className="w-4 h-4" /> Salvar Conexão Customizada
+            </button>
+            
+            {localStorage.getItem("custom_firebase_config") && (
+              <button
+                type="button"
+                onClick={handleClearCustomFirebase}
+                className="py-3 px-5 bg-slate-100 hover:bg-slate-200 active:scale-95 text-slate-600 font-bold rounded-xl transition-all text-xs cursor-pointer"
+              >
+                Voltar para Padrão do App
+              </button>
+            )}
+          </div>
+        </form>
+      </div>
 
       {/* MANUAL PRICE OVERRIDE SECTION */}
       <div className="bg-white border border-slate-200/85 rounded-2xl p-6 md:p-8 shadow-sm">
